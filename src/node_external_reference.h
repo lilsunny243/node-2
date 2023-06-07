@@ -19,6 +19,8 @@ using CFunctionCallbackWithInt64 = void (*)(v8::Local<v8::Object> receiver,
                                             int64_t);
 using CFunctionCallbackWithBool = void (*)(v8::Local<v8::Object> receiver,
                                            bool);
+using CFunctionCallbackWithStrings =
+    bool (*)(v8::Local<v8::Value>, const v8::FastOneByteString& input);
 
 // This class manages the external references from the V8 heap
 // to the C++ addresses in Node.js.
@@ -32,6 +34,7 @@ class ExternalReferenceRegistry {
   V(CFunctionCallbackReturnDouble)                                             \
   V(CFunctionCallbackWithInt64)                                                \
   V(CFunctionCallbackWithBool)                                                 \
+  V(CFunctionCallbackWithStrings)                                              \
   V(const v8::CFunctionInfo*)                                                  \
   V(v8::FunctionCallback)                                                      \
   V(v8::AccessorGetterCallback)                                                \
@@ -47,7 +50,8 @@ class ExternalReferenceRegistry {
   V(v8::IndexedPropertyDefinerCallback)                                        \
   V(v8::IndexedPropertyDeleterCallback)                                        \
   V(v8::IndexedPropertyQueryCallback)                                          \
-  V(v8::IndexedPropertyDescriptorCallback)
+  V(v8::IndexedPropertyDescriptorCallback)                                     \
+  V(const v8::String::ExternalStringResourceBase*)
 
 #define V(ExternalReferenceType)                                               \
   void Register(ExternalReferenceType addr) { RegisterT(addr); }
@@ -77,6 +81,7 @@ class ExternalReferenceRegistry {
   V(cares_wrap)                                                                \
   V(contextify)                                                                \
   V(credentials)                                                               \
+  V(encoding_binding)                                                          \
   V(env_var)                                                                   \
   V(errors)                                                                    \
   V(fs)                                                                        \

@@ -103,7 +103,7 @@ If this flag is passed, the behavior can still be set to not abort through
 ### `--allow-child-process`
 
 <!-- YAML
-added: REPLACEME
+added: v20.0.0
 -->
 
 > Stability: 1 - Experimental
@@ -144,7 +144,7 @@ Error: Access to this API has been restricted
 ### `--allow-fs-read`
 
 <!-- YAML
-added: REPLACEME
+added: v20.0.0
 -->
 
 > Stability: 1 - Experimental
@@ -154,8 +154,9 @@ the [Permission Model][].
 
 The valid arguments for the `--allow-fs-read` flag are:
 
-* `*` - To allow the `FileSystemRead` operations.
-* Paths delimited by comma (,) to manage `FileSystemRead` (reading) operations.
+* `*` - To allow all `FileSystemRead` operations.
+* Paths delimited by comma (`,`) to allow only matching `FileSystemRead`
+  operations.
 
 Examples can be found in the [File System Permissions][] documentation.
 
@@ -183,14 +184,14 @@ Error: Access to this API has been restricted
 
 The process needs to have access to the `index.js` module:
 
-```console
-$ node --experimental-permission --allow-fs-read=/path/to/index.js index.js
+```bash
+node --experimental-permission --allow-fs-read=/path/to/index.js index.js
 ```
 
 ### `--allow-fs-write`
 
 <!-- YAML
-added: REPLACEME
+added: v20.0.0
 -->
 
 > Stability: 1 - Experimental
@@ -200,8 +201,9 @@ the [Permission Model][].
 
 The valid arguments for the `--allow-fs-write` flag are:
 
-* `*` - To allow the `FileSystemWrite` operations.
-* Paths delimited by comma (,) to manage `FileSystemWrite` (writing) operations.
+* `*` - To allow all `FileSystemWrite` operations.
+* Paths delimited by comma (`,`) to allow only matching `FileSystemWrite`
+  operations.
 
 Examples can be found in the [File System Permissions][] documentation.
 
@@ -210,7 +212,7 @@ Relative paths are NOT supported through the CLI flag.
 ### `--allow-worker`
 
 <!-- YAML
-added: REPLACEME
+added: v20.0.0
 -->
 
 > Stability: 1 - Experimental
@@ -267,7 +269,7 @@ the path specified by `--snapshot-blob`.
 ```console
 $ echo "globalThis.foo = 'I am from the snapshot'" > snapshot.js
 
-# Run snapshot.js to intialize the application and snapshot the
+# Run snapshot.js to initialize the application and snapshot the
 # state of it into snapshot.blob.
 $ node --snapshot-blob snapshot.blob --build-snapshot snapshot.js
 
@@ -312,9 +314,9 @@ added: v10.12.0
 
 Print source-able bash completion script for Node.js.
 
-```console
-$ node --completion-bash > node_bash_completion
-$ source node_bash_completion
+```bash
+node --completion-bash > node_bash_completion
+source node_bash_completion
 ```
 
 ### `-C condition`, `--conditions=condition`
@@ -337,8 +339,8 @@ The default Node.js conditions of `"node"`, `"default"`, `"import"`, and
 
 For example, to run a module with "development" resolutions:
 
-```console
-$ node -C development app.js
+```bash
+node -C development app.js
 ```
 
 ### `--cpu-prof`
@@ -462,14 +464,20 @@ added: v6.0.0
 Enable FIPS-compliant crypto at startup. (Requires Node.js to be built
 against FIPS-compatible OpenSSL.)
 
-### `--enable-network-family-autoselection`
+### `--no-network-family-autoselection`
 
 <!-- YAML
 added: v19.4.0
+changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/46790
+    description: The flag was renamed from `--no-enable-network-family-autoselection`
+                 to `--no-network-family-autoselection`. The old name can still work as
+                 an alias.
 -->
 
-Enables the family autoselection algorithm unless connection options explicitly
-disables it.
+Disables the family autoselection algorithm unless connection options explicitly
+enables it.
 
 ### `--enable-source-maps`
 
@@ -537,16 +545,18 @@ Enable experimental support for the `https:` protocol in `import` specifiers.
 ### `--experimental-permission`
 
 <!-- YAML
-added: REPLACEME
+added: v20.0.0
 -->
+
+> Stability: 1 - Experimental
 
 Enable the Permission Model for current process. When enabled, the
 following permissions are restricted:
 
 * File System - manageable through
-  \[`--allow-fs-read`]\[],\[`allow-fs-write`]\[] flags
-* Child Process - manageable through \[`--allow-child-process`]\[] flag
-* Worker Threads - manageable through \[`--allow-worker`]\[] flag
+  [`--allow-fs-read`][], [`--allow-fs-write`][] flags
+* Child Process - manageable through [`--allow-child-process`][] flag
+* Worker Threads - manageable through [`--allow-worker`][] flag
 
 ### `--experimental-policy`
 
@@ -588,6 +598,18 @@ added: v16.6.0
 
 Use this flag to disable top-level await in REPL.
 
+### `--experimental-sea-config`
+
+<!-- YAML
+added: v20.0.0
+-->
+
+> Stability: 1 - Experimental
+
+Use this flag to generate a blob that can be injected into the Node.js
+binary to produce a [single executable application][]. See the documentation
+about [this configuration][`--experimental-sea-config`] for details.
+
 ### `--experimental-shadow-realm`
 
 <!-- YAML
@@ -601,7 +623,13 @@ Use this flag to enable [ShadowRealm][] support.
 ### `--experimental-test-coverage`
 
 <!-- YAML
-added: v19.7.0
+added:
+  - v19.7.0
+  - v18.15.0
+changes:
+  - version: v20.1.0
+    pr-url: https://github.com/nodejs/node/pull/47686
+    description: This option can be used with `--test`.
 -->
 
 When used in conjunction with the `node:test` module, a code coverage report is
@@ -624,6 +652,10 @@ added:
   - v13.3.0
   - v12.16.0
 changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/47286
+    description: This option is no longer required as WASI is
+                 enabled by default, but can still be passed.
   - version: v13.6.0
     pr-url: https://github.com/nodejs/node/pull/30980
     description: changed from `--experimental-wasi-unstable-preview0` to
@@ -1379,7 +1411,7 @@ path to the blob that is used to restore the application state.
 
 When loading a snapshot, Node.js checks that:
 
-1. The version, architecture and platform of the running Node.js binary
+1. The version, architecture, and platform of the running Node.js binary
    are exactly the same as that of the binary that generates the snapshot.
 2. The V8 flags and CPU features are compatible with that of the binary
    that generates the snapshot.
@@ -1394,6 +1426,9 @@ added:
   - v18.1.0
   - v16.17.0
 changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/46983
+    description: The test runner is now stable.
   - version:
       - v19.2.0
       - v18.13.0
@@ -1410,6 +1445,10 @@ for more details.
 
 <!-- YAML
 added: v18.11.0
+changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/46983
+    description: The test runner is now stable.
 -->
 
 A regular expression that configures the test runner to only execute tests
@@ -1419,7 +1458,13 @@ whose name matches the provided pattern. See the documentation on
 ### `--test-reporter`
 
 <!-- YAML
-added: v19.6.0
+added:
+  - v19.6.0
+  - v18.15.0
+changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/46983
+    description: The test runner is now stable.
 -->
 
 A test reporter to use when running tests. See the documentation on
@@ -1428,7 +1473,13 @@ A test reporter to use when running tests. See the documentation on
 ### `--test-reporter-destination`
 
 <!-- YAML
-added: v19.6.0
+added:
+  - v19.6.0
+  - v18.15.0
+changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/46983
+    description: The test runner is now stable.
 -->
 
 The destination for the corresponding test reporter. See the documentation on
@@ -1440,6 +1491,10 @@ The destination for the corresponding test reporter. See the documentation on
 added:
   - v18.0.0
   - v16.17.0
+changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/46983
+    description: The test runner is now stable.
 -->
 
 Configures the test runner to only execute top level tests that have the `only`
@@ -1799,8 +1854,8 @@ Use `--watch-path` to specify what paths to watch.
 This flag cannot be combined with
 `--check`, `--eval`, `--interactive`, or the REPL.
 
-```console
-$ node --watch index.js
+```bash
+node --watch index.js
 ```
 
 ### `--watch-path`
@@ -1822,8 +1877,8 @@ combination with `--watch`.
 This flag cannot be combined with
 `--check`, `--eval`, `--interactive`, `--test`, or the REPL.
 
-```console
-$ node --watch-path=./src --watch-path=./tests index.js
+```bash
+node --watch-path=./src --watch-path=./tests index.js
 ```
 
 This option is only supported on macOS and Windows.
@@ -1834,8 +1889,8 @@ when the option is used on a platform that does not support it.
 
 Disable the clearing of the console when watch mode restarts the process.
 
-```console
-$ node --watch --watch-preserve-output test.js
+```bash
+node --watch --watch-preserve-output test.js
 ```
 
 ### `--zero-fill-buffers`
@@ -2096,6 +2151,7 @@ Node.js options that are allowed are:
 * `--no-extra-info-on-fatal-exception`
 * `--no-force-async-hooks-checks`
 * `--no-global-search-paths`
+* `--no-network-family-autoselection`
 * `--no-warnings`
 * `--node-memory-debug`
 * `--openssl-config`
@@ -2119,6 +2175,8 @@ Node.js options that are allowed are:
 * `--secure-heap`
 * `--snapshot-blob`
 * `--test-only`
+* `--test-reporter-destination`
+* `--test-reporter`
 * `--throw-deprecation`
 * `--title`
 * `--tls-cipher-list`
@@ -2259,6 +2317,12 @@ added: v14.5.0
 If `value` equals `'1'`, the check for a supported platform is skipped during
 Node.js startup. Node.js might not execute correctly. Any issues encountered
 on unsupported platforms will not be fixed.
+
+### `NODE_TEST_CONTEXT=value`
+
+If `value` equals `'child'`, test reporter options will be overridden and test
+output will be sent to stdout in the TAP format. If any other value is provided,
+Node.js makes no guarantees about the reporter format used or its stability.
 
 ### `NODE_TLS_REJECT_UNAUTHORIZED=value`
 
@@ -2461,8 +2525,8 @@ garbage collection in an effort to free unused memory.
 On a machine with 2 GiB of memory, consider setting this to
 1536 (1.5 GiB) to leave some memory for other uses and avoid swapping.
 
-```console
-$ node --max-old-space-size=1536 index.js
+```bash
+node --max-old-space-size=1536 index.js
 ```
 
 ### `--max-semi-space-size=SIZE` (in megabytes)
@@ -2511,8 +2575,13 @@ done
 [V8 JavaScript code coverage]: https://v8project.blogspot.com/2017/12/javascript-code-coverage.html
 [Web Crypto API]: webcrypto.md
 [`"type"`]: packages.md#type
+[`--allow-child-process`]: #--allow-child-process
+[`--allow-fs-read`]: #--allow-fs-read
+[`--allow-fs-write`]: #--allow-fs-write
+[`--allow-worker`]: #--allow-worker
 [`--cpu-prof-dir`]: #--cpu-prof-dir
 [`--diagnostic-dir`]: #--diagnostic-dirdirectory
+[`--experimental-sea-config`]: single-executable-applications.md#generating-single-executable-preparation-blobs
 [`--experimental-wasm-modules`]: #--experimental-wasm-modules
 [`--heap-prof-dir`]: #--heap-prof-dir
 [`--import`]: #--importmodule
@@ -2522,7 +2591,7 @@ done
 [`--require`]: #-r---require-module
 [`Atomics.wait()`]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Atomics/wait
 [`Buffer`]: buffer.md#class-buffer
-[`CRYPTO_secure_malloc_init`]: https://www.openssl.org/docs/man1.1.0/man3/CRYPTO_secure_malloc_init.html
+[`CRYPTO_secure_malloc_init`]: https://www.openssl.org/docs/man3.0/man3/CRYPTO_secure_malloc_init.html
 [`NODE_OPTIONS`]: #node_optionsoptions
 [`NO_COLOR`]: https://no-color.org
 [`SlowBuffer`]: buffer.md#class-slowbuffer
@@ -2551,6 +2620,7 @@ done
 [scavenge garbage collector]: https://v8.dev/blog/orinoco-parallel-scavenger
 [security warning]: #warning-binding-inspector-to-a-public-ipport-combination-is-insecure
 [semi-space]: https://www.memorymanagement.org/glossary/s.html#semi.space
+[single executable application]: single-executable-applications.md
 [test reporters]: test.md#test-reporters
 [timezone IDs]: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 [tracking issue for user-land snapshots]: https://github.com/nodejs/node/issues/44014

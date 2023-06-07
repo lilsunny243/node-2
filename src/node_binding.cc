@@ -14,12 +14,6 @@
 #define NODE_BUILTIN_OPENSSL_BINDINGS(V)
 #endif
 
-#if NODE_HAVE_I18N_SUPPORT
-#define NODE_BUILTIN_ICU_BINDINGS(V) V(icu)
-#else
-#define NODE_BUILTIN_ICU_BINDINGS(V)
-#endif
-
 #if HAVE_INSPECTOR
 #define NODE_BUILTIN_PROFILER_BINDINGS(V) V(profiler)
 #else
@@ -42,6 +36,7 @@
   V(config)                                                                    \
   V(contextify)                                                                \
   V(credentials)                                                               \
+  V(encoding_binding)                                                          \
   V(errors)                                                                    \
   V(fs)                                                                        \
   V(fs_dir)                                                                    \
@@ -106,7 +101,7 @@ NODE_BUILTIN_BINDINGS(V)
 
 #define V(modname)                                                             \
   void _register_isolate_##modname(node::IsolateData* isolate_data,            \
-                                   v8::Local<v8::FunctionTemplate> target);
+                                   v8::Local<v8::ObjectTemplate> target);
 NODE_BINDINGS_WITH_PER_ISOLATE_INIT(V)
 #undef V
 
@@ -240,11 +235,11 @@ using v8::Context;
 using v8::EscapableHandleScope;
 using v8::Exception;
 using v8::FunctionCallbackInfo;
-using v8::FunctionTemplate;
 using v8::HandleScope;
 using v8::Isolate;
 using v8::Local;
 using v8::Object;
+using v8::ObjectTemplate;
 using v8::String;
 using v8::Value;
 
@@ -413,6 +408,12 @@ inline napi_addon_register_func GetNapiInitializerCallback(DLib* dlib) {
       dlib->GetSymbolAddress(name));
 }
 
+inline node_api_addon_get_api_version_func GetNapiAddonGetApiVersionCallback(
+    DLib* dlib) {
+  return reinterpret_cast<node_api_addon_get_api_version_func>(
+      dlib->GetSymbolAddress(STRINGIFY(NODE_API_MODULE_GET_API_VERSION)));
+}
+
 // DLOpen is process.dlopen(module, filename, flags).
 // Used to load 'module.node' dynamically shared objects.
 //
@@ -489,7 +490,12 @@ void DLOpen(const FunctionCallbackInfo<Value>& args) {
         callback(exports, module, context);
         return true;
       } else if (auto napi_callback = GetNapiInitializerCallback(dlib)) {
-        napi_module_register_by_symbol(exports, module, context, napi_callback);
+        int32_t module_api_version = NODE_API_DEFAULT_MODULE_API_VERSION;
+        if (auto get_version = GetNapiAddonGetApiVersionCallback(dlib)) {
+          module_api_version = get_version();
+        }
+        napi_module_register_by_symbol(
+            exports, module, context, napi_callback, module_api_version);
         return true;
       } else {
         mp = dlib->GetSavedModuleFromGlobalHandleMap();
@@ -566,13 +572,11 @@ inline struct node_module* FindModule(struct node_module* list,
 void CreateInternalBindingTemplates(IsolateData* isolate_data) {
 #define V(modname)                                                             \
   do {                                                                         \
-    Local<FunctionTemplate> templ =                                            \
-        FunctionTemplate::New(isolate_data->isolate());                        \
-    templ->InstanceTemplate()->SetInternalFieldCount(                          \
-        BaseObject::kInternalFieldCount);                                      \
-    templ->Inherit(BaseObject::GetConstructorTemplate(isolate_data));          \
+    Local<ObjectTemplate> templ =                                              \
+        ObjectTemplate::New(isolate_data->isolate());                          \
+    templ->SetInternalFieldCount(BaseObject::kInternalFieldCount);             \
     _register_isolate_##modname(isolate_data, templ);                          \
-    isolate_data->set_##modname##_binding(templ);                              \
+    isolate_data->set_##modname##_binding_template(templ);                     \
   } while (0);
   NODE_BINDINGS_WITH_PER_ISOLATE_INIT(V)
 #undef V
@@ -581,21 +585,20 @@ void CreateInternalBindingTemplates(IsolateData* isolate_data) {
 static Local<Object> GetInternalBindingExportObject(IsolateData* isolate_data,
                                                     const char* mod_name,
                                                     Local<Context> context) {
-  Local<FunctionTemplate> ctor;
+  Local<ObjectTemplate> templ;
+
 #define V(name)                                                                \
   if (strcmp(mod_name, #name) == 0) {                                          \
-    ctor = isolate_data->name##_binding();                                     \
+    templ = isolate_data->name##_binding_template();                           \
   } else  // NOLINT(readability/braces)
   NODE_BINDINGS_WITH_PER_ISOLATE_INIT(V)
 #undef V
   {
-    ctor = isolate_data->binding_data_ctor_template();
+    // Default template.
+    templ = isolate_data->binding_data_default_template();
   }
 
-  Local<Object> obj = ctor->GetFunction(context)
-                          .ToLocalChecked()
-                          ->NewInstance(context)
-                          .ToLocalChecked();
+  Local<Object> obj = templ->NewInstance(context).ToLocalChecked();
   return obj;
 }
 

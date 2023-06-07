@@ -10,6 +10,7 @@ const assert = require('assert');
 
 const expectedModules = new Set([
   'Internal Binding builtins',
+  'Internal Binding encoding_binding',
   'Internal Binding errors',
   'Internal Binding util',
   'NativeModule internal/errors',
@@ -59,6 +60,7 @@ const expectedModules = new Set([
   'Internal Binding blob',
   'NativeModule internal/url',
   'NativeModule util',
+  'NativeModule internal/webidl',
   'Internal Binding performance',
   'Internal Binding permission',
   'NativeModule internal/perf/utils',

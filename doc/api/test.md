@@ -6,9 +6,13 @@
 added:
   - v18.0.0
   - v16.17.0
+changes:
+  - version: v20.0.0
+    pr-url: https://github.com/nodejs/node/pull/46983
+    description: The test runner is now stable.
 -->
 
-> Stability: 1 - Experimental
+> Stability: 2 - Stable
 
 <!-- source_link=lib/test.js -->
 
@@ -156,8 +160,7 @@ test('skip() method with message', (t) => {
 Running tests can also be done using `describe` to declare a suite
 and `it` to declare a test.
 A suite is used to organize and group related tests together.
-`it` is an alias for `test`, except there is no test context passed,
-since nesting is done using suites.
+`it` is a shorthand for [`test()`][].
 
 ```js
 describe('A thing', () => {
@@ -376,7 +379,14 @@ Otherwise, the test is considered to be a failure. Test files must be
 executable by Node.js, but are not required to use the `node:test` module
 internally.
 
+Each test file is executed as if it was a regular script. That is, if the test
+file itself uses `node:test` to define tests, all of those tests will be
+executed within a single application thread, regardless of the value of the
+`concurrency` option of [`test()`][].
+
 ## Collecting code coverage
+
+> Stability: 1 - Experimental
 
 When Node.js is started with the [`--experimental-test-coverage`][]
 command-line flag, code coverage is collected and statistics are reported once
@@ -418,10 +428,6 @@ if (anAlwaysFalseCondition) {
 The test runner's code coverage functionality has the following limitations,
 which will be addressed in a future Node.js release:
 
-* Although coverage data is collected for child processes, this information is
-  not included in the coverage report. Because the command line test runner uses
-  child processes to execute test files, it cannot be used with
-  `--experimental-test-coverage`.
 * Source maps are not supported.
 * Excluding specific files or directories from the coverage report is not
   supported.
@@ -512,7 +518,13 @@ test('spies on an object method', (t) => {
 ## Test reporters
 
 <!-- YAML
-added: v19.6.0
+added:
+  - v19.6.0
+  - v18.15.0
+changes:
+  - version: v19.9.0
+    pr-url: https://github.com/nodejs/node/pull/47238
+    description: Reporters are now exposed at `node:test/reporters`.
 -->
 
 The `node:test` module supports passing [`--test-reporter`][]
@@ -521,8 +533,7 @@ flags for the test runner to use a specific reporter.
 The following built-reporters are supported:
 
 * `tap`
-  The `tap` reporter is the default reporter used by the test runner. It outputs
-  the test results in the [TAP][] format.
+  The `tap` reporter outputs the test results in the [TAP][] format.
 
 * `spec`
   The `spec` reporter outputs the test results in a human-readable format.
@@ -532,10 +543,28 @@ The following built-reporters are supported:
   where each passing test is represented by a `.`,
   and each failing test is represented by a `X`.
 
+When `stdout` is a [TTY][], the `spec` reporter is used by default.
+Otherwise, the `tap` reporter is used by default.
+
+The exact output of these reporters is subject to change between versions of
+Node.js, and should not be relied on programmatically. If programmatic access
+to the test runner's output is required, use the events emitted by the
+{TestsStream}.
+
+The reporters are available via the `node:test/reporters` module:
+
+```mjs
+import { tap, spec, dot } from 'node:test/reporters';
+```
+
+```cjs
+const { tap, spec, dot } = require('node:test/reporters');
+```
+
 ### Custom reporters
 
 [`--test-reporter`][] can be used to specify a path to custom reporter.
-a custom reporter is a module that exports a value
+A custom reporter is a module that exports a value
 accepted by [stream.compose][].
 Reporters should transform events emitted by a {TestsStream}
 
@@ -698,35 +727,59 @@ unless a destination is explicitly provided.
 added:
   - v18.9.0
   - v16.19.0
+changes:
+  - version: v20.1.0
+    pr-url: https://github.com/nodejs/node/pull/47628
+    description: Add a testNamePatterns option.
 -->
 
 * `options` {Object} Configuration options for running tests. The following
   properties are supported:
   * `concurrency` {number|boolean} If a number is provided,
-    then that many files would run in parallel.
+    then that many test processes would run in parallel, where each process
+    corresponds to one test file.
     If `true`, it would run `os.availableParallelism() - 1` test files in
     parallel.
     If `false`, it would only run one test file at a time.
     **Default:** `false`.
   * `files`: {Array} An array containing the list of files to run.
     **Default** matching files from [test runner execution model][].
-  * `setup` {Function} A function that accepts the `TestsStream` instance
-    and can be used to setup listeners before any tests are run.
-    **Default:** `undefined`.
-  * `signal` {AbortSignal} Allows aborting an in-progress test execution.
-  * `timeout` {number} A number of milliseconds the test execution will
-    fail after.
-    If unspecified, subtests inherit this value from their parent.
-    **Default:** `Infinity`.
   * `inspectPort` {number|Function} Sets inspector port of test child process.
     This can be a number, or a function that takes no arguments and returns a
     number. If a nullish value is provided, each process gets its own port,
     incremented from the primary's `process.debugPort`.
     **Default:** `undefined`.
+  * `setup` {Function} A function that accepts the `TestsStream` instance
+    and can be used to setup listeners before any tests are run.
+    **Default:** `undefined`.
+  * `signal` {AbortSignal} Allows aborting an in-progress test execution.
+  * `testNamePatterns` {string|RegExp|Array} A String, RegExp or a RegExp Array,
+    that can be used to only run tests whose name matches the provided pattern.
+    Test name patterns are interpreted as JavaScript regular expressions.
+    For each test that is executed, any corresponding test hooks, such as
+    `beforeEach()`, are also run.
+    **Default:** `undefined`.
+  * `timeout` {number} A number of milliseconds the test execution will
+    fail after.
+    If unspecified, subtests inherit this value from their parent.
+    **Default:** `Infinity`.
+  * `watch` {boolean} Whether to run in watch mode or not. **Default:** `false`.
 * Returns: {TestsStream}
 
-```js
+```mjs
+import { tap } from 'node:test/reporters';
+import process from 'node:process';
+
 run({ files: [path.resolve('./tests/test.js')] })
+  .compose(tap)
+  .pipe(process.stdout);
+```
+
+```cjs
+const { tap } = require('node:test/reporters');
+
+run({ files: [path.resolve('./tests/test.js')] })
+  .compose(tap)
   .pipe(process.stdout);
 ```
 
@@ -737,6 +790,9 @@ added:
   - v18.0.0
   - v16.17.0
 changes:
+  - version: v20.2.0
+    pr-url: https://github.com/nodejs/node/pull/47909
+    description: Added the `skip`, `todo`, and `only` shorthands.
   - version:
     - v18.8.0
     - v16.18.0
@@ -755,10 +811,9 @@ changes:
 * `options` {Object} Configuration options for the test. The following
   properties are supported:
   * `concurrency` {number|boolean} If a number is provided,
-    then that many tests would run in parallel.
-    If `true`, it would run `os.availableParallelism() - 1` tests in parallel.
-    For subtests, it will be `Infinity` tests in parallel.
-    If `false`, it would only run one test at a time.
+    then that many tests would run in parallel within the application thread.
+    If `true`, all scheduled asynchronous tests run concurrently within the
+    thread. If `false`, only one test runs at a time.
     If unspecified, subtests inherit this value from their parent.
     **Default:** `false`.
   * `only` {boolean} If truthy, and the test context is configured to run
@@ -813,6 +868,21 @@ The `timeout` option can be used to fail the test if it takes longer than
 canceling tests because a running test might block the application thread and
 thus prevent the scheduled cancellation.
 
+## `test.skip([name][, options][, fn])`
+
+Shorthand for skipping a test,
+same as [`test([name], { skip: true }[, fn])`][it options].
+
+## `test.todo([name][, options][, fn])`
+
+Shorthand for marking a test as `TODO`,
+same as [`test([name], { todo: true }[, fn])`][it options].
+
+## `test.only([name][, options][, fn])`
+
+Shorthand for marking a test as `only`,
+same as [`test([name], { only: true }[, fn])`][it options].
+
 ## `describe([name][, options][, fn])`
 
 * `name` {string} The name of the suite, which is displayed when reporting test
@@ -843,7 +913,9 @@ Shorthand for marking a suite as `TODO`, same as
 ## `describe.only([name][, options][, fn])`
 
 <!-- YAML
-added: REPLACEME
+added:
+  - v19.8.0
+  - v18.15.0
 -->
 
 Shorthand for marking a suite as `only`, same as
@@ -851,17 +923,21 @@ Shorthand for marking a suite as `only`, same as
 
 ## `it([name][, options][, fn])`
 
-* `name` {string} The name of the test, which is displayed when reporting test
-  results. **Default:** The `name` property of `fn`, or `'<anonymous>'` if `fn`
-  does not have a name.
-* `options` {Object} Configuration options for the suite.
-  supports the same options as `test([name][, options][, fn])`.
-* `fn` {Function|AsyncFunction} The function under test.
-  If the test uses callbacks, the callback function is passed as an argument.
-  **Default:** A no-op function.
-* Returns: `undefined`.
+<!-- YAML
+added:
+  - v18.6.0
+  - v16.17.0
+changes:
+  - version:
+    - v19.8.0
+    - v18.16.0
+    pr-url: https://github.com/nodejs/node/pull/46889
+    description: Calling `it()` is now equivalent to calling `test()`.
+-->
 
-The `it()` function is the value imported from the `node:test` module.
+Shorthand for [`test()`][].
+
+The `it()` function is imported from the `node:test` module.
 
 ## `it.skip([name][, options][, fn])`
 
@@ -876,7 +952,9 @@ same as [`it([name], { todo: true }[, fn])`][it options].
 ## `it.only([name][, options][, fn])`
 
 <!-- YAML
-added: REPLACEME
+added:
+  - v19.8.0
+  - v18.15.0
 -->
 
 Shorthand for marking a test as `only`,
@@ -1444,17 +1522,63 @@ Emitted when all subtests have completed for a given test.
 
 Emitted when a test starts.
 
+### Event: `'test:stderr'`
+
+* `data` {Object}
+  * `file` {string} The path of the test file.
+  * `message` {string} The message written to `stderr`.
+
+Emitted when a running test writes to `stderr`.
+This event is only emitted if `--test` flag is passed.
+
+### Event: `'test:stdout'`
+
+* `data` {Object}
+  * `file` {string} The path of the test file.
+  * `message` {string} The message written to `stdout`.
+
+Emitted when a running test writes to `stdout`.
+This event is only emitted if `--test` flag is passed.
+
+### Event: `'test:watch:drained'`
+
+Emitted when no more tests are queued for execution in watch mode.
+
 ## Class: `TestContext`
 
 <!-- YAML
 added:
   - v18.0.0
   - v16.17.0
+changes:
+  - version: v20.1.0
+    pr-url: https://github.com/nodejs/node/pull/47586
+    description: The `before` function was added to TestContext.
 -->
 
 An instance of `TestContext` is passed to each test function in order to
 interact with the test runner. However, the `TestContext` constructor is not
 exposed as part of the API.
+
+### `context.before([fn][, options])`
+
+<!-- YAML
+added: v20.1.0
+-->
+
+* `fn` {Function|AsyncFunction} The hook function. The first argument
+  to this function is a [`TestContext`][] object. If the hook uses callbacks,
+  the callback function is passed as the second argument. **Default:** A no-op
+  function.
+* `options` {Object} Configuration options for the hook. The following
+  properties are supported:
+  * `signal` {AbortSignal} Allows aborting an in-progress hook.
+  * `timeout` {number} A number of milliseconds the hook will fail after.
+    If unspecified, subtests inherit this value from their parent.
+    **Default:** `Infinity`.
+
+This function is used to create a hook running before
+subtest of the current test.
 
 ### `context.beforeEach([fn][, options])`
 
@@ -1694,7 +1818,7 @@ changes:
 * `options` {Object} Configuration options for the subtest. The following
   properties are supported:
   * `concurrency` {number|boolean|null} If a number is provided,
-    then that many tests would run in parallel.
+    then that many tests would run in parallel within the application thread.
     If `true`, it would run all subtests in parallel.
     If `false`, it would only run one test at a time.
     If unspecified, subtests inherit this value from their parent.
@@ -1767,6 +1891,7 @@ added:
   aborted.
 
 [TAP]: https://testanything.org/
+[TTY]: tty.md
 [`--experimental-test-coverage`]: cli.md#--experimental-test-coverage
 [`--import`]: cli.md#--importmodule
 [`--test-name-pattern`]: cli.md#--test-name-pattern
