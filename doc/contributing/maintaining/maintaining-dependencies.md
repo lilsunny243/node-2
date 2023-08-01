@@ -8,30 +8,30 @@ directories to create the Node.js binaries.
 All dependencies are located within the `deps` directory.
 This a list of all the dependencies:
 
-* [acorn 8.8.2][]
-* [ada 2.5.0][]
+* [acorn 8.10.0][]
+* [ada 2.6.0][]
 * [base64 0.5.0][]
 * [brotli 1.0.9][]
 * [c-ares 1.19.0][]
 * [cjs-module-lexer 1.2.2][]
 * [corepack][]
-* [googletest][]
+* [googletest c875c4e][]
 * [histogram 0.11.8][]
-* [icu-small 73.1][]
-* [libuv 1.44.2][]
+* [icu-small 73.2][]
+* [libuv 1.46.0][]
 * [llhttp 8.1.0][]
-* [minimatch 9.0.0][]
-* [nghttp2 1.53.0][]
+* [minimatch 9.0.3][]
+* [nghttp2 1.55.1][]
 * [nghttp3 0.7.0][]
 * [ngtcp2 0.8.1][]
 * [npm 9.6.7][]
 * [openssl 3.0.8][]
 * [postject 1.0.0-alpha.6][]
-* [simdutf 3.2.9][]
+* [simdutf 3.2.14][]
 * [undici 5.22.1][]
 * [uvwasi 0.0.16][]
 * [V8 11.3.244.8][]
-* [zlib 1.2.13][]
+* [zlib 1.2.13.1-motley-61dc0bd][]
 
 Any code which meets one or more of these conditions should
 be managed as a dependency:
@@ -144,13 +144,13 @@ takes care of npm update, it is maintained by the npm team.
 
 ## Dependency list
 
-### acorn 8.8.2
+### acorn 8.10.0
 
 The [acorn](https://github.com/acornjs/acorn) dependency is a JavaScript parser.
 [acorn-walk](https://github.com/acornjs/acorn/tree/master/acorn-walk) is
 an abstract syntax tree walker for the ESTree format.
 
-### ada 2.5.0
+### ada 2.6.0
 
 The [ada](https://github.com/ada-url/ada) dependency is a
 fast and spec-compliant URL parser written in C++.
@@ -189,7 +189,7 @@ In practical terms, Corepack will let you use Yarn and pnpm without having to
 install them - just like what currently happens with npm, which is shipped
 by Node.js by default.
 
-### googletest
+### googletest c875c4e
 
 The [googletest](https://github.com/google/googletest) dependency is Google’s
 C++ testing and mocking framework.
@@ -199,14 +199,14 @@ C++ testing and mocking framework.
 The [histogram](https://github.com/HdrHistogram/HdrHistogram_c) dependency is
 a C port of High Dynamic Range (HDR) Histogram.
 
-### icu-small 73.1
+### icu-small 73.2
 
 The [icu](http://site.icu-project.org) is widely used set of C/C++
 and Java libraries providing Unicode and Globalization
 support for software applications.
 See [maintaining-icu][] for more informations.
 
-### libuv 1.44.2
+### libuv 1.46.0
 
 The [libuv](https://github.com/libuv/libuv) dependency is a
 multi-platform support library with a focus on asynchronous I/O.
@@ -218,12 +218,12 @@ The [llhttp](https://github.com/nodejs/llhttp) dependency is
 the http parser used by Node.js.
 See [maintaining-http][] for more informations.
 
-### minimatch 9.0.0
+### minimatch 9.0.3
 
 The [minimatch](https://github.com/isaacs/minimatch) dependency is a
 minimal matching utility.
 
-### nghttp2 1.53.0
+### nghttp2 1.55.1
 
 The [nghttp2](https://github.com/nghttp2/nghttp2) dependency is a C library
 implementing HTTP/2 protocol.
@@ -286,7 +286,7 @@ See [maintaining-openssl][] for more informations.
 The [postject](https://github.com/nodejs/postject) dependency is used for the
 [Single Executable strategic initiative](https://github.com/nodejs/single-executable).
 
-### simdutf 3.2.9
+### simdutf 3.2.14
 
 The [simdutf](https://github.com/simdutf/simdutf) dependency is
 a C++ library for fast UTF-8 decoding and encoding.
@@ -311,25 +311,25 @@ See [maintaining-web-assembly][] for more informations.
 high-performance JavaScript and WebAssembly engine, written in C++.
 See [maintaining-V8][] for more informations.
 
-### zlib 1.2.13
+### zlib 1.2.13.1-motley-61dc0bd
 
 The [zlib](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/third_party/zlib)
 dependency lossless data-compression library,
 it comes from the Chromium team's zlib fork which incorporated
 performance improvements not currently available in standard zlib.
 
-[acorn 8.8.2]: #acorn-882
-[ada 2.5.0]: #ada-250
+[acorn 8.10.0]: #acorn-8100
+[ada 2.6.0]: #ada-260
 [base64 0.5.0]: #base64-050
 [brotli 1.0.9]: #brotli-109
 [c-ares 1.19.0]: #c-ares-1190
 [cjs-module-lexer 1.2.2]: #cjs-module-lexer-122
 [corepack]: #corepack
 [dependency-update-action]: ../../../.github/workflows/tools.yml
-[googletest]: #googletest
+[googletest c875c4e]: #googletest-c875c4e
 [histogram 0.11.8]: #histogram-0118
-[icu-small 73.1]: #icu-small-731
-[libuv 1.44.2]: #libuv-1442
+[icu-small 73.2]: #icu-small-732
+[libuv 1.46.0]: #libuv-1460
 [llhttp 8.1.0]: #llhttp-810
 [maintaining-V8]: ./maintaining-V8.md
 [maintaining-cjs-module-lexer]: ./maintaining-cjs-module-lexer.md
@@ -337,16 +337,16 @@ performance improvements not currently available in standard zlib.
 [maintaining-icu]: ./maintaining-icu.md
 [maintaining-openssl]: ./maintaining-openssl.md
 [maintaining-web-assembly]: ./maintaining-web-assembly.md
-[minimatch 9.0.0]: #minimatch-900
-[nghttp2 1.53.0]: #nghttp2-1530
+[minimatch 9.0.3]: #minimatch-903
+[nghttp2 1.55.1]: #nghttp2-1551
 [nghttp3 0.7.0]: #nghttp3-070
 [ngtcp2 0.8.1]: #ngtcp2-081
 [npm 9.6.7]: #npm-967
 [openssl 3.0.8]: #openssl-308
 [postject 1.0.0-alpha.6]: #postject-100-alpha6
-[simdutf 3.2.9]: #simdutf-329
+[simdutf 3.2.14]: #simdutf-3214
 [undici 5.22.1]: #undici-5221
 [update-openssl-action]: ../../../.github/workflows/update-openssl.yml
 [uvwasi 0.0.16]: #uvwasi-0016
 [v8 11.3.244.8]: #v8-1132448
-[zlib 1.2.13]: #zlib-1213
+[zlib 1.2.13.1-motley-61dc0bd]: #zlib-12131-motley-61dc0bd

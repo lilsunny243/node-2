@@ -8,6 +8,7 @@
 #include "node_errors.h"
 #include "node_external_reference.h"
 #include "node_file.h"
+#include "permission/permission.h"
 #include "util.h"
 #include "v8.h"
 
@@ -85,6 +86,10 @@ void Concat(const FunctionCallbackInfo<Value>& args) {
 
 void BlobFromFilePath(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);
+  BufferValue path(env->isolate(), args[0]);
+  CHECK_NOT_NULL(*path);
+  THROW_IF_INSUFFICIENT_PERMISSIONS(
+      env, permission::PermissionScope::kFileSystemRead, path.ToStringView());
   auto entry = DataQueue::CreateFdEntry(env, args[0]);
   if (entry == nullptr) {
     return THROW_ERR_INVALID_ARG_VALUE(env, "Unabled to open file as blob");
@@ -125,7 +130,7 @@ void Blob::CreatePerContextProperties(Local<Object> target,
                                       Local<Context> context,
                                       void* priv) {
   Realm* realm = Realm::GetCurrent(context);
-  realm->AddBindingData<BlobBindingData>(context, target);
+  realm->AddBindingData<BlobBindingData>(target);
 }
 
 Local<FunctionTemplate> Blob::GetConstructorTemplate(Environment* env) {
@@ -387,7 +392,7 @@ Blob::BlobTransferData::Deserialize(
 }
 
 BaseObject::TransferMode Blob::GetTransferMode() const {
-  return BaseObject::TransferMode::kCloneable;
+  return TransferMode::kCloneable;
 }
 
 std::unique_ptr<worker::TransferData> Blob::CloneForMessaging() const {
@@ -530,8 +535,7 @@ void BlobBindingData::Deserialize(Local<Context> context,
   DCHECK_EQ(index, BaseObject::kEmbedderType);
   HandleScope scope(context->GetIsolate());
   Realm* realm = Realm::GetCurrent(context);
-  BlobBindingData* binding =
-      realm->AddBindingData<BlobBindingData>(context, holder);
+  BlobBindingData* binding = realm->AddBindingData<BlobBindingData>(holder);
   CHECK_NOT_NULL(binding);
 }
 

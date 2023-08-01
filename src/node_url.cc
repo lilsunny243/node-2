@@ -40,6 +40,7 @@ BindingData::BindingData(Realm* realm, v8::Local<v8::Object> object)
             FIXED_ONE_BYTE_STRING(realm->isolate(), "urlComponents"),
             url_components_buffer_.GetJSArray())
       .Check();
+  url_components_buffer_.MakeWeak();
 }
 
 bool BindingData::PrepareForSerialization(v8::Local<v8::Context> context,
@@ -66,7 +67,7 @@ void BindingData::Deserialize(v8::Local<v8::Context> context,
   DCHECK_EQ(index, BaseObject::kEmbedderType);
   v8::HandleScope scope(context->GetIsolate());
   Realm* realm = Realm::GetCurrent(context);
-  BindingData* binding = realm->AddBindingData<BindingData>(context, holder);
+  BindingData* binding = realm->AddBindingData<BindingData>(holder);
   CHECK_NOT_NULL(binding);
 }
 
@@ -170,6 +171,16 @@ bool BindingData::FastCanParse(Local<Value> receiver,
 }
 
 CFunction BindingData::fast_can_parse_(CFunction::Make(FastCanParse));
+
+bool BindingData::FastCanParseWithBase(Local<Value> receiver,
+                                       const FastOneByteString& input,
+                                       const FastOneByteString& base) {
+  auto base_view = std::string_view(base.data, base.length);
+  return ada::can_parse(std::string_view(input.data, input.length), &base_view);
+}
+
+CFunction BindingData::fast_can_parse_with_base_(
+    CFunction::Make(FastCanParseWithBase));
 
 void BindingData::Format(const FunctionCallbackInfo<Value>& args) {
   CHECK_GT(args.Length(), 4);
@@ -351,6 +362,11 @@ void BindingData::CreatePerIsolateProperties(IsolateData* isolate_data,
   SetMethod(isolate, target, "update", Update);
   SetFastMethodNoSideEffect(
       isolate, target, "canParse", CanParse, &fast_can_parse_);
+  SetFastMethodNoSideEffect(isolate,
+                            target,
+                            "canParseWithBase",
+                            CanParse,
+                            &fast_can_parse_with_base_);
 }
 
 void BindingData::CreatePerContextProperties(Local<Object> target,
@@ -358,7 +374,7 @@ void BindingData::CreatePerContextProperties(Local<Object> target,
                                              Local<Context> context,
                                              void* priv) {
   Realm* realm = Realm::GetCurrent(context);
-  realm->AddBindingData<BindingData>(context, target);
+  realm->AddBindingData<BindingData>(target);
 }
 
 void BindingData::RegisterExternalReferences(
@@ -372,6 +388,8 @@ void BindingData::RegisterExternalReferences(
   registry->Register(CanParse);
   registry->Register(FastCanParse);
   registry->Register(fast_can_parse_.GetTypeInfo());
+  registry->Register(FastCanParseWithBase);
+  registry->Register(fast_can_parse_with_base_.GetTypeInfo());
 }
 
 std::string FromFilePath(const std::string_view file_path) {

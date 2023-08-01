@@ -28,6 +28,7 @@ The current security stewards are documented in the main Node.js
 | Datadog      | Vladimir        | 2022-Sep-23  |
 | NodeSource   | Juan            | 2022-Nov-04  |
 | RH and IBM   | Michael         | 2023-Feb-16  |
+| NearForm     | Rafael          | 2023-Jun-20  |
 | NearForm     | Rafael          |              |
 | Datadog      | Bryan           |              |
 | IBM          | Joe             |              |
@@ -116,7 +117,7 @@ The google groups UI does not support adding a CC, until we figure
 out a better way, forward the email you receive to
 `oss-security@lists.openwall.com` as a CC.
 
-* [ ] Create a new issue in [nodejs/tweet][]
+* [ ] Send a message to `#nodejs-social` in OpenJS Foundation slack
 
   ```text
   Security release pre-alert:

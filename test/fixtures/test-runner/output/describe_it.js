@@ -13,12 +13,12 @@ it.todo('sync pass todo', () => {
 it('sync pass todo with message', { todo: 'this is a passing todo' }, () => {
 });
 
-it.todo('sync fail todo', () => {
-  throw new Error('thrown from sync fail todo');
+it.todo('sync todo', () => {
+  throw new Error('should not count as a failure');
 });
 
-it('sync fail todo with message', { todo: 'this is a failing todo' }, () => {
-  throw new Error('thrown from sync fail todo with message');
+it('sync todo with message', { todo: 'this is a failing todo' }, () => {
+  throw new Error('should not count as a failure');
 });
 
 it.skip('sync skip pass', () => {
@@ -374,4 +374,23 @@ describe('rejected thenable', () => {
       return (_, errorHandler) => errorHandler(new Error('custom error'));
     },
   };
+});
+
+describe("async describe function", async () => {
+  await null;
+
+  await it("it inside describe 1", async () => {
+    await null
+  });
+  await it("it inside describe 2", async () => {
+    await null;
+  });
+
+  describe("inner describe", async () => {
+    await null;
+
+    it("it inside inner describe", async () => {
+      await null;
+    });
+  });
 });

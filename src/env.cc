@@ -19,6 +19,7 @@
 #include "tracing/agent.h"
 #include "tracing/traced_value.h"
 #include "util-inl.h"
+#include "v8-cppgc.h"
 #include "v8-profiler.h"
 
 #include <algorithm>
@@ -28,6 +29,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <unordered_map>
 
 namespace node {
 
@@ -170,15 +172,13 @@ bool AsyncHooks::pop_async_context(double async_id) {
 }
 
 void AsyncHooks::clear_async_id_stack() {
-  if (env()->can_call_into_js()) {
+  if (!js_execution_async_resources_.IsEmpty() && env()->can_call_into_js()) {
     Isolate* isolate = env()->isolate();
     HandleScope handle_scope(isolate);
-    if (!js_execution_async_resources_.IsEmpty()) {
-      USE(PersistentToLocal::Strong(js_execution_async_resources_)
-              ->Set(env()->context(),
-                    env()->length_string(),
-                    Integer::NewFromUnsigned(isolate, 0)));
-    }
+    USE(PersistentToLocal::Strong(js_execution_async_resources_)
+            ->Set(env()->context(),
+                  env()->length_string(),
+                  Integer::NewFromUnsigned(isolate, 0)));
   }
 
   native_execution_async_resources_.clear();
@@ -499,6 +499,11 @@ void IsolateData::CreateProperties() {
   contextify::ContextifyContext::InitializeGlobalTemplates(this);
 }
 
+constexpr uint16_t kDefaultCppGCEmebdderID = 0x90de;
+Mutex IsolateData::isolate_data_mutex_;
+std::unordered_map<uint16_t, std::unique_ptr<PerIsolateWrapperData>>
+    IsolateData::wrapper_data_map_;
+
 IsolateData::IsolateData(Isolate* isolate,
                          uv_loop_t* event_loop,
                          MultiIsolatePlatform* platform,
@@ -512,6 +517,46 @@ IsolateData::IsolateData(Isolate* isolate,
       snapshot_data_(snapshot_data) {
   options_.reset(
       new PerIsolateOptions(*(per_process::cli_options->per_isolate)));
+  v8::CppHeap* cpp_heap = isolate->GetCppHeap();
+
+  uint16_t cppgc_id = kDefaultCppGCEmebdderID;
+  if (cpp_heap != nullptr) {
+    // The general convention of the wrappable layout for cppgc in the
+    // ecosystem is:
+    // [  0  ] -> embedder id
+    // [  1  ] -> wrappable instance
+    // If the Isolate includes a CppHeap attached by another embedder,
+    // And if they also use the field 0 for the ID, we DCHECK that
+    // the layout matches our layout, and record the embedder ID for cppgc
+    // to avoid accidentally enabling cppgc on non-cppgc-managed wrappers .
+    v8::WrapperDescriptor descriptor = cpp_heap->wrapper_descriptor();
+    if (descriptor.wrappable_type_index == BaseObject::kEmbedderType) {
+      cppgc_id = descriptor.embedder_id_for_garbage_collected;
+      DCHECK_EQ(descriptor.wrappable_instance_index, BaseObject::kSlot);
+    }
+    // If the CppHeap uses the slot we use to put non-cppgc-traced BaseObject
+    // for embedder ID, V8 could accidentally enable cppgc on them. So
+    // safe guard against this.
+    DCHECK_NE(descriptor.wrappable_type_index, BaseObject::kSlot);
+  }
+  // We do not care about overflow since we just want this to be different
+  // from the cppgc id.
+  uint16_t non_cppgc_id = cppgc_id + 1;
+
+  {
+    // GC could still be run after the IsolateData is destroyed, so we store
+    // the ids in a static map to ensure pointers to them are still valid
+    // then. In practice there should be very few variants of the cppgc id
+    // in one process so the size of this map should be very small.
+    node::Mutex::ScopedLock lock(isolate_data_mutex_);
+    auto it = wrapper_data_map_.find(cppgc_id);
+    if (it == wrapper_data_map_.end()) {
+      auto pair = wrapper_data_map_.emplace(
+          cppgc_id, new PerIsolateWrapperData{cppgc_id, non_cppgc_id});
+      it = pair.first;
+    }
+    wrapper_data_ = it->second.get();
+  }
 
   if (snapshot_data == nullptr) {
     CreateProperties();
@@ -574,10 +619,6 @@ void Environment::AssignToContext(Local<v8::Context> context,
   context->SetAlignedPointerInEmbedderData(ContextEmbedderIndex::kEnvironment,
                                            this);
   context->SetAlignedPointerInEmbedderData(ContextEmbedderIndex::kRealm, realm);
-  // Used to retrieve bindings
-  context->SetAlignedPointerInEmbedderData(
-      ContextEmbedderIndex::kBindingDataStoreIndex,
-      realm->binding_data_store());
 
   // ContextifyContexts will update this to a pointer to the native object.
   context->SetAlignedPointerInEmbedderData(
@@ -592,6 +633,18 @@ void Environment::AssignToContext(Local<v8::Context> context,
 
   this->async_hooks()->InstallPromiseHooks(context);
   TrackContext(context);
+}
+
+void Environment::UnassignFromContext(Local<v8::Context> context) {
+  if (!context.IsEmpty()) {
+    context->SetAlignedPointerInEmbedderData(ContextEmbedderIndex::kEnvironment,
+                                             nullptr);
+    context->SetAlignedPointerInEmbedderData(ContextEmbedderIndex::kRealm,
+                                             nullptr);
+    context->SetAlignedPointerInEmbedderData(
+        ContextEmbedderIndex::kContextifyContext, nullptr);
+  }
+  UntrackContext(context);
 }
 
 void Environment::TryLoadAddon(
@@ -771,7 +824,7 @@ Environment::Environment(IsolateData* isolate_data,
   destroy_async_id_list_.reserve(512);
 
   performance_state_ = std::make_unique<performance::PerformanceState>(
-      isolate, MAYBE_FIELD_PTR(env_info, performance_state));
+      isolate, time_origin_, MAYBE_FIELD_PTR(env_info, performance_state));
 
   if (*TRACE_EVENT_API_GET_CATEGORY_GROUP_ENABLED(
           TRACING_CATEGORY_NODE1(environment)) != 0) {
@@ -791,16 +844,17 @@ Environment::Environment(IsolateData* isolate_data,
 
   if (options_->experimental_permission) {
     permission()->EnablePermissions();
-    // If any permission is set the process shouldn't be able to neither
-    // spawn/worker nor use addons unless explicitly allowed by the user
-    if (!options_->allow_fs_read.empty() || !options_->allow_fs_write.empty()) {
-      options_->allow_native_addons = false;
-      if (!options_->allow_child_process) {
-        permission()->Apply("*", permission::PermissionScope::kChildProcess);
-      }
-      if (!options_->allow_worker_threads) {
-        permission()->Apply("*", permission::PermissionScope::kWorkerThreads);
-      }
+    // The process shouldn't be able to neither
+    // spawn/worker nor use addons or enable inspector
+    // unless explicitly allowed by the user
+    options_->allow_native_addons = false;
+    flags_ = flags_ | EnvironmentFlags::kNoCreateInspector;
+    permission()->Apply("*", permission::PermissionScope::kInspector);
+    if (!options_->allow_child_process) {
+      permission()->Apply("*", permission::PermissionScope::kChildProcess);
+    }
+    if (!options_->allow_worker_threads) {
+      permission()->Apply("*", permission::PermissionScope::kWorkerThreads);
     }
 
     if (!options_->allow_fs_read.empty()) {
@@ -819,7 +873,6 @@ void Environment::InitializeMainContext(Local<Context> context,
                                         const EnvSerializeInfo* env_info) {
   principal_realm_ = std::make_unique<PrincipalRealm>(
       this, context, MAYBE_FIELD_PTR(env_info, principal_realm));
-  AssignToContext(context, principal_realm_.get(), ContextInfo(""));
   if (env_info != nullptr) {
     DeserializeProperties(env_info);
   }
@@ -889,9 +942,9 @@ Environment::~Environment() {
   inspector_agent_.reset();
 #endif
 
-  ctx->SetAlignedPointerInEmbedderData(ContextEmbedderIndex::kEnvironment,
-                                       nullptr);
-  ctx->SetAlignedPointerInEmbedderData(ContextEmbedderIndex::kRealm, nullptr);
+  // Sub-realms should have been cleared with Environment's cleanup.
+  DCHECK_EQ(shadow_realms_.size(), 0);
+  principal_realm_.reset();
 
   if (trace_state_observer_) {
     tracing::AgentWriterHandle* writer = GetTracingAgentWriter();
@@ -913,10 +966,6 @@ Environment::~Environment() {
     for (binding::DLib& addon : loaded_addons_) {
       addon.Close();
     }
-  }
-
-  for (auto realm : shadow_realms_) {
-    realm->OnEnvironmentDestruct();
   }
 }
 
@@ -1713,18 +1762,19 @@ void Environment::DeserializeProperties(const EnvSerializeInfo* info) {
     std::cerr << *info << "\n";
   }
 
+  // Deserialize the realm's properties before running the deserialize
+  // requests as the requests may need to access the realm's properties.
+  principal_realm_->DeserializeProperties(&info->principal_realm);
   RunDeserializeRequests();
 
   async_hooks_.Deserialize(ctx);
   immediate_info_.Deserialize(ctx);
   timeout_info_.Deserialize(ctx);
   tick_info_.Deserialize(ctx);
-  performance_state_->Deserialize(ctx);
+  performance_state_->Deserialize(ctx, time_origin_);
   exit_info_.Deserialize(ctx);
   stream_base_state_.Deserialize(ctx);
   should_abort_on_uncaught_toggle_.Deserialize(ctx);
-
-  principal_realm_->DeserializeProperties(&info->principal_realm);
 }
 
 uint64_t GuessMemoryAvailableToTheProcess() {
