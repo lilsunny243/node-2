@@ -82,15 +82,28 @@ describe('require(\'node:test\').run', { concurrency: true }, () => {
     ]);
   });
 
-  it('should be piped with spec', async () => {
-    const specReporter = new spec();
-    const result = await run({
-      files: [join(testFixtures, 'default-behavior/test/random.cjs')]
-    }).compose(specReporter).toArray();
-    const stringResults = result.map((bfr) => bfr.toString());
-    assert.match(stringResults[0], /this should pass/);
-    assert.match(stringResults[1], /tests 1/);
-    assert.match(stringResults[1], /pass 1/);
+  describe('should be piped with spec reporter', () => {
+    it('new spec', async () => {
+      const specReporter = new spec();
+      const result = await run({
+        files: [join(testFixtures, 'default-behavior/test/random.cjs')]
+      }).compose(specReporter).toArray();
+      const stringResults = result.map((bfr) => bfr.toString());
+      assert.match(stringResults[0], /this should pass/);
+      assert.match(stringResults[1], /tests 1/);
+      assert.match(stringResults[1], /pass 1/);
+    });
+
+    it('spec()', async () => {
+      const specReporter = spec();
+      const result = await run({
+        files: [join(testFixtures, 'default-behavior/test/random.cjs')]
+      }).compose(specReporter).toArray();
+      const stringResults = result.map((bfr) => bfr.toString());
+      assert.match(stringResults[0], /this should pass/);
+      assert.match(stringResults[1], /tests 1/);
+      assert.match(stringResults[1], /pass 1/);
+    });
   });
 
   it('should be piped with tap', async () => {
@@ -132,6 +145,18 @@ describe('require(\'node:test\').run', { concurrency: true }, () => {
       .compose(tap)
       .toArray();
     assert.strictEqual(result[2], 'ok 1 - this should be skipped # SKIP test name does not match pattern\n');
+    assert.strictEqual(result[5], 'ok 2 - this should be executed\n');
+  });
+
+  it('should pass only to children', async () => {
+    const result = await run({
+      files: [join(testFixtures, 'test_only.js')],
+      only: true
+    })
+      .compose(tap)
+      .toArray();
+
+    assert.strictEqual(result[2], 'ok 1 - this should be skipped # SKIP \'only\' option not set\n');
     assert.strictEqual(result[5], 'ok 2 - this should be executed\n');
   });
 

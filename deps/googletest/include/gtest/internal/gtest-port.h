@@ -208,6 +208,8 @@
 //   or
 //                                 UniversalPrinter<absl::optional>
 //                                 specializations. Always defined to 0 or 1.
+//   GTEST_INTERNAL_HAS_STD_SPAN - for enabling UniversalPrinter<std::span>
+//                                 specializations. Always defined to 0 or 1
 //   GTEST_INTERNAL_HAS_STRING_VIEW - for enabling Matcher<std::string_view> or
 //                                    Matcher<absl::string_view>
 //                                    specializations. Always defined to 0 or 1.
@@ -220,7 +222,6 @@
 //   GTEST_HAS_ALT_PATH_SEP_ - Always defined to 0 or 1.
 //   GTEST_WIDE_STRING_USES_UTF16_ - Always defined to 0 or 1.
 //   GTEST_HAS_MUTEX_AND_THREAD_LOCAL_ - Always defined to 0 or 1.
-//   GTEST_HAS_DOWNCAST_ - Always defined to 0 or 1.
 //   GTEST_HAS_NOTIFICATION_- Always defined to 0 or 1.
 //
 // Synchronization:
@@ -312,10 +313,6 @@
 
 #include "gtest/internal/custom/gtest-port.h"
 #include "gtest/internal/gtest-port-arch.h"
-
-#ifndef GTEST_HAS_DOWNCAST_
-#define GTEST_HAS_DOWNCAST_ 0
-#endif
 
 #ifndef GTEST_HAS_MUTEX_AND_THREAD_LOCAL_
 #define GTEST_HAS_MUTEX_AND_THREAD_LOCAL_ 0
@@ -614,7 +611,7 @@ typedef struct _RTL_CRITICAL_SECTION GTEST_CRITICAL_SECTION;
 // Determines whether clone(2) is supported.
 // Usually it will only be available on Linux, excluding
 // Linux on the Itanium architecture.
-// Also see http://linux.die.net/man/2/clone.
+// Also see https://linux.die.net/man/2/clone.
 #ifndef GTEST_HAS_CLONE
 // The user didn't tell us, so we need to figure it out.
 
@@ -1153,17 +1150,12 @@ inline To ImplicitCast_(To x) {
 // check to enforce this.
 template <class Derived, class Base>
 Derived* CheckedDowncastToActualType(Base* base) {
+  static_assert(std::is_base_of<Base, Derived>::value,
+                "target type not derived from source type");
 #if GTEST_HAS_RTTI
-  GTEST_CHECK_(typeid(*base) == typeid(Derived));
+  GTEST_CHECK_(base == nullptr || dynamic_cast<Derived*>(base) != nullptr);
 #endif
-
-#if GTEST_HAS_DOWNCAST_
-  return ::down_cast<Derived*>(base);
-#elif GTEST_HAS_RTTI
-  return dynamic_cast<Derived*>(base);  // NOLINT
-#else
-  return static_cast<Derived*>(base);  // Poor man's downcast.
-#endif
+  return static_cast<Derived*>(base);
 }
 
 #if GTEST_HAS_STREAM_REDIRECTION
@@ -2415,6 +2407,16 @@ inline ::std::nullopt_t Nullopt() { return ::std::nullopt; }
 
 #ifndef GTEST_INTERNAL_HAS_OPTIONAL
 #define GTEST_INTERNAL_HAS_OPTIONAL 0
+#endif
+
+#ifdef __has_include
+#if __has_include(<span>) && GTEST_INTERNAL_CPLUSPLUS_LANG >= 202002L
+#define GTEST_INTERNAL_HAS_STD_SPAN 1
+#endif  // __has_include(<span>) && GTEST_INTERNAL_CPLUSPLUS_LANG >= 202002L
+#endif  // __has_include
+
+#ifndef GTEST_INTERNAL_HAS_STD_SPAN
+#define GTEST_INTERNAL_HAS_STD_SPAN 0
 #endif
 
 #ifdef GTEST_HAS_ABSL

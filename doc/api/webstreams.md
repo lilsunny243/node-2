@@ -5,12 +5,16 @@
 <!-- YAML
 added: v16.5.0
 changes:
+  - version:
+    - REPLACEME
+    pr-url: https://github.com/nodejs/node/pull/45684
+    description: No longer experimental.
   - version: v18.0.0
     pr-url: https://github.com/nodejs/node/pull/42225
     description: Use of this API no longer emit a runtime warning.
 -->
 
-> Stability: 1 - Experimental.
+> Stability: 2 - Stable
 
 An implementation of the [WHATWG Streams Standard][].
 
@@ -248,6 +252,7 @@ const transformedStream = stream.pipeThrough(transform);
 
 for await (const chunk of transformedStream)
   console.log(chunk);
+  // Prints: A
 ```
 
 ```cjs
@@ -273,6 +278,7 @@ const transformedStream = stream.pipeThrough(transform);
 (async () => {
   for await (const chunk of transformedStream)
     console.log(chunk);
+    // Prints: A
 })();
 ```
 
@@ -390,7 +396,7 @@ port2.postMessage(stream, [stream]);
 ### `ReadableStream.from(iterable)`
 
 <!-- YAML
-added: REPLACEME
+added: v20.6.0
 -->
 
 * `iterable` {Iterable} Object implementing the `Symbol.asyncIterator` or
@@ -410,7 +416,7 @@ async function* asyncIterableGenerator() {
 const stream = ReadableStream.from(asyncIterableGenerator());
 
 for await (const chunk of stream)
-  console.log(chunk); // Prints 'a', 'b', 'c'
+  console.log(chunk); // Prints: 'a', 'b', 'c'
 ```
 
 ```cjs
@@ -426,7 +432,7 @@ async function* asyncIterableGenerator() {
   const stream = ReadableStream.from(asyncIterableGenerator());
 
   for await (const chunk of stream)
-    console.log(chunk); // Prints 'a', 'b', 'c'
+    console.log(chunk); // Prints: 'a', 'b', 'c'
 })();
 ```
 
@@ -895,7 +901,7 @@ added: v16.5.0
 
 * Returns: {WritableStreamDefaultWriter}
 
-Creates and creates a new writer instance that can be used to write
+Creates and returns a new writer instance that can be used to write
 data into the `WritableStream`.
 
 #### `writableStream.locked`
@@ -995,8 +1001,8 @@ The amount of data required to fill the {WritableStream}'s queue.
 added: v16.5.0
 -->
 
-* type: A promise that is fulfilled with `undefined` when the
-  writer is ready to be used.
+* Type: {Promise} Fulfilled with `undefined` when the writer is ready
+  to be used.
 
 #### `writableStreamDefaultWriter.releaseLock()`
 
@@ -1217,13 +1223,13 @@ changes:
     description: This class is now exposed on the global object.
 -->
 
-#### `new ByteLengthQueuingStrategy(options)`
+#### `new ByteLengthQueuingStrategy(init)`
 
 <!-- YAML
 added: v16.5.0
 -->
 
-* `options` {Object}
+* `init` {Object}
   * `highWaterMark` {number}
 
 #### `byteLengthQueuingStrategy.highWaterMark`
@@ -1254,13 +1260,13 @@ changes:
     description: This class is now exposed on the global object.
 -->
 
-#### `new CountQueuingStrategy(options)`
+#### `new CountQueuingStrategy(init)`
 
 <!-- YAML
 added: v16.5.0
 -->
 
-* `options` {Object}
+* `init` {Object}
   * `highWaterMark` {number}
 
 #### `countQueuingStrategy.highWaterMark`
@@ -1520,6 +1526,7 @@ const dataArray = encoder.encode('hello world from consumers!');
 const readable = Readable.from(dataArray);
 const data = await arrayBuffer(readable);
 console.log(`from readable: ${data.byteLength}`);
+// Prints: from readable: 76
 ```
 
 ```cjs
@@ -1532,6 +1539,7 @@ const dataArray = encoder.encode('hello world from consumers!');
 const readable = Readable.from(dataArray);
 arrayBuffer(readable).then((data) => {
   console.log(`from readable: ${data.byteLength}`);
+  // Prints: from readable: 76
 });
 ```
 
@@ -1553,6 +1561,7 @@ const dataBlob = new Blob(['hello world from consumers!']);
 const readable = dataBlob.stream();
 const data = await blob(readable);
 console.log(`from readable: ${data.size}`);
+// Prints: from readable: 27
 ```
 
 ```cjs
@@ -1563,6 +1572,7 @@ const dataBlob = new Blob(['hello world from consumers!']);
 const readable = dataBlob.stream();
 blob(readable).then((data) => {
   console.log(`from readable: ${data.size}`);
+  // Prints: from readable: 27
 });
 ```
 
@@ -1586,6 +1596,7 @@ const dataBuffer = Buffer.from('hello world from consumers!');
 const readable = Readable.from(dataBuffer);
 const data = await buffer(readable);
 console.log(`from readable: ${data.length}`);
+// Prints: from readable: 27
 ```
 
 ```cjs
@@ -1598,6 +1609,7 @@ const dataBuffer = Buffer.from('hello world from consumers!');
 const readable = Readable.from(dataBuffer);
 buffer(readable).then((data) => {
   console.log(`from readable: ${data.length}`);
+  // Prints: from readable: 27
 });
 ```
 
@@ -1627,6 +1639,7 @@ const items = Array.from(
 const readable = Readable.from(JSON.stringify(items));
 const data = await json(readable);
 console.log(`from readable: ${data.length}`);
+// Prints: from readable: 100
 ```
 
 ```cjs
@@ -1645,6 +1658,7 @@ const items = Array.from(
 const readable = Readable.from(JSON.stringify(items));
 json(readable).then((data) => {
   console.log(`from readable: ${data.length}`);
+  // Prints: from readable: 100
 });
 ```
 
@@ -1665,6 +1679,7 @@ import { Readable } from 'node:stream';
 const readable = Readable.from('Hello world from consumers!');
 const data = await text(readable);
 console.log(`from readable: ${data.length}`);
+// Prints: from readable: 27
 ```
 
 ```cjs
@@ -1674,6 +1689,7 @@ const { Readable } = require('node:stream');
 const readable = Readable.from('Hello world from consumers!');
 text(readable).then((data) => {
   console.log(`from readable: ${data.length}`);
+  // Prints: from readable: 27
 });
 ```
 

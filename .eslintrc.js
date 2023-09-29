@@ -53,10 +53,10 @@ module.exports = {
   overrides: [
     {
       files: [
-        'test/es-module/test-esm-type-flag.js',
-        'test/es-module/test-esm-type-flag-alias.js',
         '*.mjs',
         'test/es-module/test-esm-example-loader.js',
+        'test/es-module/test-esm-type-flag.js',
+        'test/es-module/test-esm-type-flag-alias.js',
       ],
       parserOptions: { sourceType: 'module' },
     },
@@ -110,6 +110,14 @@ module.exports = {
           message: 'Import process instead of using the global',
         },
       ] },
+    },
+    {
+      files: [
+        'lib/internal/modules/**/*.js',
+      ],
+      rules: {
+        'curly': 'error',
+      },
     },
     {
       files: [
@@ -353,5 +361,6 @@ module.exports = {
     WritableStream: 'readable',
     WritableStreamDefaultWriter: 'readable',
     WritableStreamDefaultController: 'readable',
+    WebSocket: 'readable',
   },
 };

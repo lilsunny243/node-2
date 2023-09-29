@@ -111,6 +111,7 @@ class EnvironmentOptions : public Options {
   std::string dns_result_order;
   bool enable_source_maps = false;
   bool experimental_fetch = true;
+  bool experimental_websocket = false;
   bool experimental_global_customevent = true;
   bool experimental_global_web_crypto = true;
   bool experimental_https_modules = false;
@@ -121,8 +122,8 @@ class EnvironmentOptions : public Options {
   std::string experimental_policy_integrity;
   bool has_policy_integrity_string = false;
   bool experimental_permission = false;
-  std::string allow_fs_read;
-  std::string allow_fs_write;
+  std::vector<std::string> allow_fs_read;
+  std::vector<std::string> allow_fs_write;
   bool allow_child_process = false;
   bool allow_worker_threads = false;
   bool experimental_repl_await = true;
@@ -158,6 +159,8 @@ class EnvironmentOptions : public Options {
 #endif  // HAVE_INSPECTOR
   std::string redirect_warnings;
   std::string diagnostic_dir;
+  std::string env_file;
+  bool has_env_file_string = false;
   bool test_runner = false;
   bool test_runner_coverage = false;
   std::vector<std::string> test_name_pattern;
